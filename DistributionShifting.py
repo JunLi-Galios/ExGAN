@@ -34,6 +34,7 @@ class NWSDataset(Dataset):
         self.fake.requires_grad = False
         print('val', val)
         print('len of self.real', len(self.real))
+        print('len of self.fake', len(self.fake))
         self.realdata = torch.cat([self.real[:val], self.fake[:-1 * val]], 0)
 
     def __len__(self):
