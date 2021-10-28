@@ -23,6 +23,7 @@ class NWSDataset(Dataset):
         self, path='data/', dsize=2557
     ):
         self.real = torch.load(path+'real.pt').cuda()
+        print('real sum (1,2,3) argsort', self.real.sum(dim=(1,2,3)).argsort())
         self.indices = np.random.permutation(dsize)
         self.real.requires_grad = False
         
