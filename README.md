@@ -105,5 +105,6 @@ If you use this code for your research, please consider citing our arXiv preprin
 ## Things to Check
 1. What does the image look like?
 2. How to visulize it?
+3. Why training GAN with noisy label
 
 
