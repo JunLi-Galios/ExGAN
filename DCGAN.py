@@ -100,6 +100,8 @@ class Discriminator(nn.Module):
 
     def forward(self, inp):
         print('D input size', inp.size())
+        print('D max', inp.max())
+        print('D min', inp.min())
         out = self.block1(inp) 
         out = self.block2(out)
         out = self.block3(out)
