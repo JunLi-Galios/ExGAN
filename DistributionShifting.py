@@ -32,6 +32,8 @@ class NWSDataset(Dataset):
         self.real.requires_grad = False
         self.fake = torch.load(fake).cuda(gpu_id)
         self.fake.requires_grad = False
+        print('val', val)
+        print('len of self.real', len(self.real))
         self.realdata = torch.cat([self.real[:val], self.fake[:-1 * val]], 0)
 
     def __len__(self):
