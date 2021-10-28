@@ -101,3 +101,9 @@ If you use this code for your research, please consider citing our arXiv preprin
     year={2021}
 }
 ```
+
+## Things to Check
+1. What does the image look like?
+2. How to visulize it?
+
+
