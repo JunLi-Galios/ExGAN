@@ -99,6 +99,7 @@ class Discriminator(nn.Module):
         self.source = nn.Linear(64, 1)
 
     def forward(self, inp):
+        print('D input size', inp.size())
         out = self.block1(inp) 
         out = self.block2(out)
         out = self.block3(out)
