@@ -129,20 +129,21 @@ class Aggregator(nn.Module):
         out = self.block5(out)
         size = out.shape[0]
         out = out.view(size, -1)
-        source = torch.sigmoid(self.source(out))
+        source = torch.abs(self.source(out))
         return source
 
 latentdim = 20
 img_size = (64, 64)
-out_channels = 
 criterionSource = nn.BCELoss()
 criterionContinuous = nn.L1Loss()
 criterionValG = nn.L1Loss()
 criterionValD = nn.L1Loss()
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
 D = Discriminator(in_channels=1).cuda()
+A = Aggregator(out_channels = np.prod(img_size)).cuda()
 G.apply(weights_init_normal)
 D.apply(weights_init_normal)
+A.apply(weights_init_normal)
 
 optimizerG = optim.Adam(G.parameters(), lr=0.0002, betas=(0.5, 0.999))
 optimizerD = optim.Adam(D.parameters(), lr=0.0001, betas=(0.5, 0.999))
@@ -182,7 +183,10 @@ for epoch in range(1000):
         realSource = D(images + noise*torch.randn_like(images).cuda())
         realLoss = criterionSource(realSource, trueTensor.expand_as(realSource))
         latent = Variable(torch.randn(batch_size, latentdim, 1, 1)).cuda()
+        
         fakeData = G(latent)
+        max_value, _ = torch.max(fakeData, dim=0)
+        fakeData = fakeData - max_value
         fakeSource = D(fakeData.detach())
         fakeLoss = criterionSource(fakeSource, falseTensor.expand_as(fakeSource))
         lossD = realLoss + fakeLoss
