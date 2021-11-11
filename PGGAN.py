@@ -111,8 +111,30 @@ class Discriminator(nn.Module):
         out = out.view(size, -1)
         source = torch.sigmoid(self.source(out))
         return source
+    
+class Aggregator(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Aggregator, self).__init__()
+        self.in_channels = in_channels
+        self.block1 = convBNReLU(self.in_channels, 64)
+        self.block2 = convBNReLU(64, 128)
+        self.block5 = nn.Conv2d(128, 64, 4, 1, 0)
+        self.source = nn.Linear(64, out_channels)
+
+    def forward(self, inp):
+        out = self.block1(inp) 
+        out = self.block2(out)
+#         out = self.block3(out)
+#         out = self.block4(out)
+        out = self.block5(out)
+        size = out.shape[0]
+        out = out.view(size, -1)
+        source = torch.sigmoid(self.source(out))
+        return source
 
 latentdim = 20
+img_size = (64, 64)
+out_channels = 
 criterionSource = nn.BCELoss()
 criterionContinuous = nn.L1Loss()
 criterionValG = nn.L1Loss()
@@ -135,6 +157,7 @@ DIRNAME = 'PGGAN/'
 os.makedirs(DIRNAME, exist_ok=True)
 
 board = SummaryWriter(log_dir=DIRNAME)
+
 
 step = 0
 for epoch in range(1000):
