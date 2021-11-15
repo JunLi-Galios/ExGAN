@@ -130,6 +130,7 @@ class Aggregator(nn.Module):
         size = out.shape[0]
         out = out.view(size, -1)
         source = torch.abs(self.source(out))
+        source = torch.
         return source
 
 latentdim = 20
@@ -147,6 +148,7 @@ A.apply(weights_init_normal)
 
 optimizerG = optim.Adam(G.parameters(), lr=0.0002, betas=(0.5, 0.999))
 optimizerD = optim.Adam(D.parameters(), lr=0.0001, betas=(0.5, 0.999))
+optimizerA = optim.Adam(A.parameters(), lr=0.0001, betas=(0.5, 0.999))
 static_z = Variable(FloatTensor(torch.randn((81, latentdim, 1, 1)))).cuda()
 
 def sample_image(batches_done):
@@ -161,6 +163,8 @@ board = SummaryWriter(log_dir=DIRNAME)
 
 
 step = 0
+# mu = torch.ones(img_size)
+sigma = torch.ones(img_size)
 for epoch in range(1000):
     print(epoch)
     for images in dataloader:
