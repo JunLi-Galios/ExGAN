@@ -113,13 +113,15 @@ class Discriminator(nn.Module):
         return source
     
 class Aggregator(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, img_size):
         super(Aggregator, self).__init__()
         self.in_channels = in_channels
         self.block1 = convBNReLU(self.in_channels, 64)
         self.block2 = convBNReLU(64, 128)
         self.block5 = nn.Conv2d(128, 64, 4, 1, 0)
+        out_channels = 2 * np.prod(img_size)
         self.source = nn.Linear(64, out_channels)
+        self.img_size = img_size + [2]
 
     def forward(self, inp):
         out = self.block1(inp) 
@@ -130,7 +132,7 @@ class Aggregator(nn.Module):
         size = out.shape[0]
         out = out.view(size, -1)
         source = torch.abs(self.source(out))
-        source = torch.
+        source = torch.reshape(source, self.img_size)
         return source
 
 latentdim = 20
@@ -141,7 +143,7 @@ criterionValG = nn.L1Loss()
 criterionValD = nn.L1Loss()
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
 D = Discriminator(in_channels=1).cuda()
-A = Aggregator(out_channels = np.prod(img_size)).cuda()
+A = Aggregator(img_size).cuda()
 G.apply(weights_init_normal)
 D.apply(weights_init_normal)
 A.apply(weights_init_normal)
@@ -161,13 +163,50 @@ os.makedirs(DIRNAME, exist_ok=True)
 
 board = SummaryWriter(log_dir=DIRNAME)
 
+def pick_samples(samples, u):
+    flag_list = []
+    print(samples.size())
+    for i in range(len(u)):
+        flag = samples[:,i] > u[i]
+        flag_list.append(flag)
+        print(flag)
+
+    flags = torch.stack(flag_list, dim=1)
+    print('flags', flags.size())
+    
+    flags.max()
+    total_flag = samples[:,0] < -np.inf
+    
+    for i in range(len(u)):
+        total_flag = total_flag | flag_list[i]
+        
+    print(total_flag)
+    return samples[total_flag,:]
 
 step = 0
+ratio = 0.001
 # mu = torch.ones(img_size)
-sigma = torch.ones(img_size)
+para = torch.ones(img_size + [2])
+e = torch.distributions.exponential.Exponential(torch.ones(img_size))
+n_extremes_list = []
+acc_list = []
+
+
 for epoch in range(1000):
     print(epoch)
     for images in dataloader:
+        para_val = A(images)
+        print('para_val size', para_val.size())
+        para_incre = torch.mean(torch.abs(para_val),dim=0)
+        para = (1 - ratio) * para + ratio * para_incre
+        mu = para[:,:,0]
+        sigma = para[:,:,1]
+        
+        extreme_samples = pick_samples(samples, u) - u
+        n_extremes = len(extreme_samples)
+        n_extremes_list.append(n_extremes)    
+        
+        
         noise = 1e-5*max(1 - (epoch/500.0), 0)
         step += 1
         batch_size = images[0].shape[0]
@@ -181,16 +220,22 @@ for epoch in range(1000):
         )
         trueTensor = trueTensor.view(-1, 1).cuda()
         falseTensor = falseTensor.view(-1, 1).cuda()
-        images = images.cuda()
+        extreme_samples = extreme_samples.cuda()
         print('trueTensor', trueTensor.size())
         print('realSource', realSource.size())
-        realSource = D(images + noise*torch.randn_like(images).cuda())
+        realSource = D(extreme_samples + noise*torch.randn_like(extreme_samples).cuda())
         realLoss = criterionSource(realSource, trueTensor.expand_as(realSource))
-        latent = Variable(torch.randn(batch_size, latentdim, 1, 1)).cuda()
+        
+        
+        latent = Variable(torch.randn(n_extremes, latentdim, 1, 1)).cuda()
         
         fakeData = G(latent)
+        print('fakeData', fakeData.size())
         max_value, _ = torch.max(fakeData, dim=0)
-        fakeData = fakeData - max_value
+        G_samples = fakeData - max_value
+        e_samples = e.rsample([len(G_samples)])
+        G_extremes = sigma * (G_samples + e_samples)
+        
         fakeSource = D(fakeData.detach())
         fakeLoss = criterionSource(fakeSource, falseTensor.expand_as(fakeSource))
         lossD = realLoss + fakeLoss
