@@ -118,6 +118,8 @@ class Aggregator(nn.Module):
         self.in_channels = in_channels
         self.block1 = convBNReLU(self.in_channels, 64)
         self.block2 = convBNReLU(64, 128)
+        self.block3 = convBNReLU(128, 256)
+        self.block4 = convBNReLU(256, 512)
         self.block5 = nn.Conv2d(128, 64, 4, 1, 0)
         out_channels = 2 * np.prod(img_size)
         self.source = nn.Linear(64, out_channels)
@@ -126,17 +128,19 @@ class Aggregator(nn.Module):
     def forward(self, inp):
         out = self.block1(inp) 
         out = self.block2(out)
-#         out = self.block3(out)
-#         out = self.block4(out)
+        out = self.block3(out)
+        out = self.block4(out)
         out = self.block5(out)
         size = out.shape[0]
+        print('out', out.size())
         out = out.view(size, -1)
+        print('out', out.size())
         source = torch.abs(self.source(out))
         source = torch.reshape(source, self.img_size)
         return source
 
 latentdim = 20
-img_size = (64, 64)
+img_size = [64, 64]
 criterionSource = nn.BCELoss()
 criterionContinuous = nn.L1Loss()
 criterionValG = nn.L1Loss()
