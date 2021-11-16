@@ -20,7 +20,7 @@ class NWSDataset(Dataset):
     """
 
     def __init__(
-        self, path='data/', dsize=2557
+        self, path='/mnt/home/junli/PGGAN/data/', dsize=2557
     ):
         self.real = torch.load(path+'real.pt').cuda()
         self.indices = np.random.permutation(dsize)
