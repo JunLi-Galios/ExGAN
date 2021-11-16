@@ -120,10 +120,10 @@ class Aggregator(nn.Module):
         self.block2 = convBNReLU(64, 128)
         self.block3 = convBNReLU(128, 256)
         self.block4 = convBNReLU(256, 512)
-        self.block5 = nn.Conv2d(128, 64, 4, 1, 0)
+        self.block5 = nn.Conv2d(512, 64, 4, 1, 0)
         out_channels = 2 * np.prod(img_size)
         self.source = nn.Linear(64, out_channels)
-        self.img_size = img_size + [2]
+        self.img_size = img_size
 
     def forward(self, inp):
         out = self.block1(inp) 
@@ -136,7 +136,8 @@ class Aggregator(nn.Module):
         out = out.view(size, -1)
         print('out', out.size())
         source = torch.abs(self.source(out))
-        source = torch.reshape(source, self.img_size)
+        print('source', source.size())
+        source = torch.reshape(source, [size] + self.img_size + [2])
         return source
 
 latentdim = 20
@@ -169,28 +170,36 @@ board = SummaryWriter(log_dir=DIRNAME)
 
 def pick_samples(samples, u):
     flag_list = []
-    print(samples.size())
-    for i in range(len(u)):
-        flag = samples[:,i] > u[i]
+    batch = samples.size()[0]
+    print('samples', samples.size())
+    re_samples = samples.reshape(batch, -1)
+    print('re_samples', re_samples.size())
+    re_u = u.flatten()
+    
+    for i in range(len(re_u)):
+        flag = re_samples[:,i] > re_u[i]
         flag_list.append(flag)
-        print(flag)
+#         print(flag)
 
     flags = torch.stack(flag_list, dim=1)
-    print('flags', flags.size())
+#     print('flags', flags.size())
     
     flags.max()
-    total_flag = samples[:,0] < -np.inf
+    total_flag = re_samples[:,0] < -np.inf
     
-    for i in range(len(u)):
+    for i in range(len(re_u)):
         total_flag = total_flag | flag_list[i]
         
-    print(total_flag)
-    return samples[total_flag,:]
+#     print(total_flag)
+    extremes = re_samples[total_flag,:]
+    extremes = torch.reshape(extremes, [-1, 1] + img_size)
+    
+    return extremes
 
 step = 0
 ratio = 0.001
 # mu = torch.ones(img_size)
-para = torch.ones(img_size + [2])
+para = torch.ones(img_size + [2]).cuda()
 e = torch.distributions.exponential.Exponential(torch.ones(img_size))
 n_extremes_list = []
 acc_list = []
@@ -206,8 +215,9 @@ for epoch in range(1000):
         mu = para[:,:,0]
         sigma = para[:,:,1]
         
-        extreme_samples = pick_samples(samples, u) - u
+        extreme_samples = pick_samples(images, mu) - mu
         n_extremes = len(extreme_samples)
+        print('n_extremes', n_extremes)
         n_extremes_list.append(n_extremes)    
         
         
@@ -226,9 +236,10 @@ for epoch in range(1000):
         falseTensor = falseTensor.view(-1, 1).cuda()
         extreme_samples = extreme_samples.cuda()
         print('trueTensor', trueTensor.size())
-        print('realSource', realSource.size())
         realSource = D(extreme_samples + noise*torch.randn_like(extreme_samples).cuda())
         realLoss = criterionSource(realSource, trueTensor.expand_as(realSource))
+        print('realSource', realSource.size())
+
         
         
         latent = Variable(torch.randn(n_extremes, latentdim, 1, 1)).cuda()
