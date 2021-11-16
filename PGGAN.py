@@ -244,7 +244,7 @@ for epoch in range(1000):
         
         fakeData = G(latent)
         print('fakeData', fakeData.size())
-        max_value, _ = torch.max(fakeData, dim=0)
+        max_value, _ = torch.max(torch.reshape(fakeData, [n_extremes, -1]), dim=1)
         G_samples = fakeData - max_value
         e_samples = e.rsample([len(G_samples)]).cuda()
         print('e_samples', e_samples.size())
