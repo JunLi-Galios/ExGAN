@@ -50,7 +50,7 @@ def convTBNReLU(in_channels, out_channels, kernel_size=4, stride=2, padding=1):
             padding=padding,
         ),
         nn.InstanceNorm2d(out_channels),
-        nn.LeakyReLU(0.2, True),
+        nn.LeakyReLU(0.2, False),
     )
 
 
@@ -64,7 +64,7 @@ def convBNReLU(in_channels, out_channels, kernel_size=4, stride=2, padding=1):
             padding=padding,
         ),
         nn.InstanceNorm2d(out_channels),
-        nn.LeakyReLU(0.2, True),
+        nn.LeakyReLU(0.2, False),
     )
 
 
