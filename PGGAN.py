@@ -211,6 +211,7 @@ for epoch in range(1000):
         para_val = A(images)
         print('para_val size', para_val.size())
         para_incre = torch.mean(torch.abs(para_val),dim=0)
+        print('para_incre size', para_incre.size())
         para = (1 - ratio) * para + ratio * para_incre
         mu = para[:,:,0]
         sigma = para[:,:,1]
@@ -238,9 +239,7 @@ for epoch in range(1000):
         print('trueTensor', trueTensor.size())
         realSource = D(extreme_samples + noise*torch.randn_like(extreme_samples).cuda())
         realLoss = criterionSource(realSource, trueTensor.expand_as(realSource))
-        print('realSource', realSource.size())
-
-        
+        print('realSource', realSource.size())        
         
         latent = Variable(torch.randn(n_extremes, latentdim, 1, 1)).cuda()
         
@@ -248,7 +247,7 @@ for epoch in range(1000):
         print('fakeData', fakeData.size())
         max_value, _ = torch.max(fakeData, dim=0)
         G_samples = fakeData - max_value
-        e_samples = e.rsample([len(G_samples)])
+        e_samples = e.rsample([len(G_samples)]).cuda()
         G_extremes = sigma * (G_samples + e_samples)
         
         fakeSource = D(G_extremes.detach())
