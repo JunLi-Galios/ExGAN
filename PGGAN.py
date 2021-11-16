@@ -50,7 +50,7 @@ def convTBNReLU(in_channels, out_channels, kernel_size=4, stride=2, padding=1):
             padding=padding,
         ),
         nn.InstanceNorm2d(out_channels),
-        nn.LeakyReLU(0.2, False),
+        nn.LeakyReLU(0.2, True),
     )
 
 
@@ -64,7 +64,7 @@ def convBNReLU(in_channels, out_channels, kernel_size=4, stride=2, padding=1):
             padding=padding,
         ),
         nn.InstanceNorm2d(out_channels),
-        nn.LeakyReLU(0.2, False),
+        nn.LeakyReLU(0.2, True),
     )
 
 
@@ -121,8 +121,9 @@ class Aggregator(nn.Module):
         self.block3 = convBNReLU(128, 256)
         self.block4 = convBNReLU(256, 512)
         self.block5 = nn.Conv2d(512, 64, 4, 1, 0)
-        out_channels = 2 * np.prod(img_size)
-        self.source = nn.Linear(64, out_channels)
+        out_channels = np.prod(img_size)
+        self.mu = nn.Linear(64, out_channels)
+        self.sigma = nn.Linear(64, out_channels)
         self.img_size = img_size
 
     def forward(self, inp):
@@ -135,10 +136,9 @@ class Aggregator(nn.Module):
         print('out', out.size())
         out = out.view(size, -1)
         print('out', out.size())
-        source = torch.abs(self.source(out))
-        print('source', source.size())
-        source = torch.reshape(source, [size] + self.img_size + [2])
-        return source
+        mu = torch.abs(self.mu(out))
+        sigma = torch.abs(self.sigma(out))
+        return torch.reshape(mu, [size] + self.img_size), torch.reshape(sigma, [size] + self.img_size)
 
 latentdim = 20
 img_size = [64, 64]
@@ -208,13 +208,15 @@ acc_list = []
 for epoch in range(1000):
     print(epoch)
     for images in dataloader:
-        para_val = A(images)
-        print('para_val size', para_val.size())
-        para_incre = torch.mean(torch.abs(para_val),dim=0)
-        print('para_incre size', para_incre.size())
-        para = (1 - ratio) * para + ratio * para_incre
-        mu = para[:,:,0]
-        sigma = para[:,:,1]
+        mu_val, sigma_val = A(images)
+        print('mu_val size', mu_val.size())
+        mu_incre = torch.mean(torch.abs(mu_val),dim=0)
+        print('mu_incre size', mu_incre.size())
+        mu = (1 - ratio) * mu + ratio * muincre
+        print('sigma_val size', sigma_val.size())
+        sigma_incre = torch.mean(torch.abs(sigma_val),dim=0)
+        print('sigma_incre size', sigma_incre.size())
+        sigma = (1 - ratio) * sigma + ratio * sigma_incre
         
         extreme_samples = pick_samples(images, mu) - mu
         n_extremes = len(extreme_samples)
