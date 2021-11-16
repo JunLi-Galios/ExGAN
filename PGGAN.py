@@ -199,7 +199,8 @@ def pick_samples(samples, u):
 step = 0
 ratio = 0.001
 # mu = torch.ones(img_size)
-para = torch.ones(img_size + [2]).cuda() * 0.5
+mu = torch.ones(img_size).cuda() * 0.5
+sigma = torch.ones(img_size).cuda()
 e = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
 n_extremes_list = []
 acc_list = []
@@ -212,7 +213,7 @@ for epoch in range(1000):
         print('mu_val size', mu_val.size())
         mu_incre = torch.mean(torch.abs(mu_val),dim=0)
         print('mu_incre size', mu_incre.size())
-        mu = (1 - ratio) * mu + ratio * muincre
+        mu = (1 - ratio) * mu + ratio * mu_incre
         print('sigma_val size', sigma_val.size())
         sigma_incre = torch.mean(torch.abs(sigma_val),dim=0)
         print('sigma_incre size', sigma_incre.size())
