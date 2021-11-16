@@ -199,8 +199,8 @@ def pick_samples(samples, u):
 step = 0
 ratio = 0.001
 # mu = torch.ones(img_size)
-para = torch.ones(img_size + [2]).cuda()
-e = torch.distributions.exponential.Exponential(torch.ones(img_size))
+para = torch.ones(img_size + [2]).cuda() * 0.5
+e = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
 n_extremes_list = []
 acc_list = []
 
@@ -220,7 +220,6 @@ for epoch in range(1000):
         n_extremes = len(extreme_samples)
         print('n_extremes', n_extremes)
         n_extremes_list.append(n_extremes)    
-        
         
         noise = 1e-5*max(1 - (epoch/500.0), 0)
         step += 1
@@ -248,7 +247,11 @@ for epoch in range(1000):
         max_value, _ = torch.max(fakeData, dim=0)
         G_samples = fakeData - max_value
         e_samples = e.rsample([len(G_samples)]).cuda()
+        print('e_samples', e_samples.size())
         G_extremes = sigma * (G_samples + e_samples)
+        
+        print('images', images.size())
+        print('G_extremes', G_extremes.size())
         
         fakeSource = D(G_extremes.detach())
         fakeLoss = criterionSource(fakeSource, falseTensor.expand_as(fakeSource))
