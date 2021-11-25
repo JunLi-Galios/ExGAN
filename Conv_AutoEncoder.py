@@ -203,4 +203,5 @@ for epoch in range(num_epochs):
     print('\n EPOCH {}/{} \t train loss {} \t val loss {}'.format(epoch + 1, num_epochs,train_loss,val_loss))
     diz_loss['train_loss'].append(train_loss)
     diz_loss['val_loss'].append(val_loss)
-    torch.save()
+    torch.save(encoder, 'encoder{}.pt'.format(epoch))
+    torch.save(decoder, 'decoder{}.pt'.format(epoch))
