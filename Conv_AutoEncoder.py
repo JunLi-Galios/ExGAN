@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt # plotting library
 import numpy as np # this module is useful to work with numerical arrays
-import pandas as pd 
 import random 
 import torch
 import torchvision
 from torchvision import transforms
-from torch.utils.data import DataLoader,random_split
+from torch.utils.data import Dataset, DataLoader,random_split
 from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -16,9 +15,10 @@ class NWSDataset(Dataset):
     """
 
     def __init__(
-        self, path='data/real.pt', dsize=2557
+        self, path='data/real.pt'
     ):
         self.real = torch.load(path).cuda()
+        dsize = self.real.size()[0]
         print('real sum (1,2,3) argsort', self.real.sum(dim=(1,2,3)).argsort())
         self.indices = np.random.permutation(dsize)
         self.real.requires_grad = False
@@ -50,6 +50,10 @@ class Encoder(nn.Module):
             nn.BatchNorm2d(16),
             nn.ReLU(True),
             nn.Conv2d(16, 32, 3, stride=2, padding=0),
+            nn.BatchNorm2d(32),
+            nn.ReLU(True),
+            nn.Conv2d(32, 64, 3, stride=2, padding=0),
+            nn.BatchNorm2d(64),
             nn.ReLU(True)
         )
         
@@ -57,7 +61,7 @@ class Encoder(nn.Module):
         self.flatten = nn.Flatten(start_dim=1)
 ### Linear section
         self.encoder_lin = nn.Sequential(
-            nn.Linear(3 * 3 * 32, 128),
+            nn.Linear(3 * 3 * 64, 128),
             nn.ReLU(True),
             nn.Linear(128, encoded_space_dim)
         )
@@ -75,7 +79,7 @@ class Decoder(nn.Module):
         self.decoder_lin = nn.Sequential(
             nn.Linear(encoded_space_dim, 128),
             nn.ReLU(True),
-            nn.Linear(128, 3 * 3 * 32),
+            nn.Linear(128, 3 * 3 * 64),
             nn.ReLU(True)
         )
 
@@ -83,6 +87,10 @@ class Decoder(nn.Module):
         unflattened_size=(32, 3, 3))
 
         self.decoder_conv = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, 3, 
+            stride=2, output_padding=0),
+            nn.BatchNorm2d(32),
+            nn.ReLU(True),
             nn.ConvTranspose2d(32, 16, 3, 
             stride=2, output_padding=0),
             nn.BatchNorm2d(16),
@@ -133,7 +141,9 @@ print(f'Selected device: {device}')
 encoder.to(device)
 decoder.to(device)
 
-def train_epoch_den(encoder, decoder, device, dataloader, loss_fn, optimizer,noise_factor=0.3):
+
+
+def train_epoch(encoder, decoder, device, dataloader, loss_fn, optimizer,noise_factor=0.3):
     # Set train mode for both the encoder and the decoder
     encoder.train()
     decoder.train()
@@ -141,7 +151,7 @@ def train_epoch_den(encoder, decoder, device, dataloader, loss_fn, optimizer,noi
     # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
     for image_batch, _ in dataloader: # with "_" we just ignore the labels (the second element of the dataloader tuple)
         # Move tensor to the proper device
-        image_noisy = add_noise(image_batch,noise_factor)
+        image_noisy = image_batch + noise_factor * torch.randn_like(image_batch)
         image_noisy = image_noisy.to(device)    
         # Encode data
         encoded_data = encoder(image_noisy)
@@ -193,3 +203,4 @@ for epoch in range(num_epochs):
     print('\n EPOCH {}/{} \t train loss {} \t val loss {}'.format(epoch + 1, num_epochs,train_loss,val_loss))
     diz_loss['train_loss'].append(train_loss)
     diz_loss['val_loss'].append(val_loss)
+    torch.save()
