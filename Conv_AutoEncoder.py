@@ -188,8 +188,8 @@ def test_epoch(encoder, decoder, device, dataloader, loss_fn):
 num_epochs = 30
 diz_loss = {'train_loss':[],'val_loss':[]}
 for epoch in range(num_epochs):
-   train_loss =train_epoch(encoder,decoder,device,train_loader,loss_fn,optim)
-   val_loss = test_epoch(encoder,decoder,device,test_loader,loss_fn)
-   print('\n EPOCH {}/{} \t train loss {} \t val loss {}'.format(epoch + 1, num_epochs,train_loss,val_loss))
-   diz_loss['train_loss'].append(train_loss)
-   diz_loss['val_loss'].append(val_loss)
+    train_loss =train_epoch(encoder,decoder,device,train_loader,loss_fn,optim)
+    val_loss = test_epoch(encoder,decoder,device,test_loader,loss_fn)
+    print('\n EPOCH {}/{} \t train loss {} \t val loss {}'.format(epoch + 1, num_epochs,train_loss,val_loss))
+    diz_loss['train_loss'].append(train_loss)
+    diz_loss['val_loss'].append(val_loss)
