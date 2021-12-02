@@ -232,7 +232,7 @@ def cal_mu_incre(e_list, mu):
     min_mu_incre = np.inf
     for i in range(len(e_list)):
         e = e_list[i]
-        mu_incre = e.optimize(img_size, mu[i])
+        mu_incre = e.level(img_size, mu[i])
         if min_mu_incre > mu_incre:
             min_mu_incre = mu_incre
             
