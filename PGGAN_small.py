@@ -155,8 +155,8 @@ class Transformer(nn.Module):
         return F.softplus(sigma_out), F.softplus(gamma_out)
 
     
-avg_e = AvgExtremeness(0.5)
-max_e = MaxExtremeness(0.5) 
+avg_e = AvgExtremeness()
+max_e = MaxExtremeness() 
 e_list = [avg_e, max_e]
       
 latentdim = 20
