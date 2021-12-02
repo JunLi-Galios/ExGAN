@@ -31,7 +31,7 @@ class Extremeness:
         
 class AvgExtremeness(Extremeness):
     def __init__(self):
-        super(AvgExtremeness, self).__init__(self)
+        super(AvgExtremeness, self).__init__()
         
     def cal_extreme(self, inp):
         batch = inp.size()[0]
@@ -45,8 +45,8 @@ class AvgExtremeness(Extremeness):
     
     
 class MaxExtremeness(Extremeness):
-    def __init__(self,mu):
-        super(MaxExtremeness, self).__init__(self)
+    def __init__(self):
+        super(MaxExtremeness, self).__init__()
         
     def cal_extreme(inp):
         batch = inp.size()[0]
