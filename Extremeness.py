@@ -6,9 +6,8 @@ from torch.autograd import Variable
 import numpy as np
 
 class Extremeness(Object):
-    def __init__(self, mu):
+    def __init__(self):
         super(Extremeness，self).__init__()
-        self.mu = mu
     
     def cal_extreme(self, inp):
         raise NotImplementedError
@@ -16,12 +15,12 @@ class Extremeness(Object):
     def func(self):
         raise NotImplementedError
         
-    def optimize(self, inp_size):        
+    def optimize(self, inp_size, mu):        
         X = torch.nn.Parameter(torch.randn(inp_size) * 0.001)
         fn = self.func()
         loss = - fn(X)
         optimizer = optim.SGD(X, lr=0.001)
-        while loss > -self.mu:
+        while loss > -mu:
             optimizer.zero_grad()
             lossG.backward()
             optimizer.step()
@@ -31,9 +30,8 @@ class Extremeness(Object):
         
         
 class AvgExtremeness(Extremeness):
-    def __init__(self, mu):
-        super(AvgExtremeness，self).__init__(self, mu)
-        print('AvgExtremeness mu', mu)
+    def __init__(self):
+        super(AvgExtremeness，self).__init__(self)
         
     def cal_extreme(self, inp):
         batch = inp.size()[0]
@@ -48,8 +46,7 @@ class AvgExtremeness(Extremeness):
     
 class MaxExtremeness(Extremeness):
     def __init__(self,mu):
-        super(MaxExtremeness，self).__init__(self, mu)
-        print('MaxExtremeness mu', mu)
+        super(MaxExtremeness，self).__init__(self)
         
     def cal_extreme(inp):
         batch = inp.size()[0]
@@ -59,8 +56,5 @@ class MaxExtremeness(Extremeness):
     def func(self):
         fn = lambda x: torch.max(x)
         return fn
-    
-    
+   
 
-    
-    
