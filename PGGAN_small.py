@@ -139,8 +139,8 @@ class Aggregator(nn.Module):
         out = out.view(size, -1)
         print('out', out.size())
         mu = F.softplus(self.mu(out))
-        sigma = F.softplus(self.sigma(out))
-        gamma = F.softplus(self.gamma(out))
+        sigma = self.sigma(out)
+        gamma = self.gamma(out)
         return mu, sigma, gamma
       
 class Transformer(nn.Module):
@@ -199,7 +199,7 @@ def pick_samples(samples, e_list, mu):
     flag_list = []
     for i in range(len(e_list)):
         e = e_list[i]
-        flag = e(samples) > mu[i]
+        flag = e.cal_extreme(samples) > mu[i]
         flag_list.append(flag)
 
 #     flags = torch.stack(flag_list, dim=1)
@@ -220,7 +220,7 @@ def pick_samples(samples, e_list, mu):
 step = 0
 ratio = 0.001
 # mu = torch.ones(img_size)
-mu = torch.ones(img_size).cuda() * 0.5
+mu = torch.ones(k).cuda() * 0.5
 sigma = torch.ones(img_size).cuda()
 gamma = torch.ones(img_size).cuda()
 expo = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
@@ -250,10 +250,12 @@ for epoch in range(1000):
         mu = (1 - ratio) * mu + ratio * mu_incre
         
         sigma_incre = torch.mean(sigma_val,dim=0)
+        sigma_incre = sigma_incre.reshape(img_size)
         print('sigma_incre size', sigma_incre.size())
         sigma = (1 - ratio) * sigma + ratio * sigma_incre
         
         gamma_incre = torch.mean(gamma_val,dim=0)
+        gamma_incre = gamma_incre.reshape(img_size)
         print('gamma_incre size', gamma_incre.size())
         gamma = (1 - ratio) * gamma + ratio * gamma_incre
         
