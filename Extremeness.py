@@ -5,9 +5,9 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 
-class Extremeness(Object):
+class Extremeness:
     def __init__(self):
-        super(Extremeness，self).__init__()
+        super(Extremeness, self).__init__()
     
     def cal_extreme(self, inp):
         raise NotImplementedError
@@ -31,7 +31,7 @@ class Extremeness(Object):
         
 class AvgExtremeness(Extremeness):
     def __init__(self):
-        super(AvgExtremeness，self).__init__(self)
+        super(AvgExtremeness, self).__init__(self)
         
     def cal_extreme(self, inp):
         batch = inp.size()[0]
@@ -46,7 +46,7 @@ class AvgExtremeness(Extremeness):
     
 class MaxExtremeness(Extremeness):
     def __init__(self,mu):
-        super(MaxExtremeness，self).__init__(self)
+        super(MaxExtremeness, self).__init__(self)
         
     def cal_extreme(inp):
         batch = inp.size()[0]
