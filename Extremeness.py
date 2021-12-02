@@ -16,22 +16,25 @@ class Extremeness:
     def func(self):
         raise NotImplementedError
         
-    def init_func(self, inp_size, mu):
+    def grad(self, inp_size, mu):
         raise NotImplementedError
         
-    def optimize(self, inp_size, mu):        
-        X = torch.nn.Parameter(self.init_func(inp_size, mu))
-        mu = mu.cuda()
-        fn = self.func()
-        loss = - fn(X).cuda()
-        optimizer = optim.SGD([X], lr=0.001)
-        while loss > -mu:
-            optimizer.zero_grad()
-            lossG.backward()
-            optimizer.step()
-            loss = - fn(X)
+    def level(self, inp_size, mu):
+        raise NotImplementedError
+        
+#     def optimize(self, inp_size, mu):        
+#         X = torch.nn.Parameter(self.init_func(inp_size, mu))
+#         mu = mu.cuda()
+#         fn = self.func()
+#         loss = - fn(X).cuda()
+#         optimizer = optim.SGD([X], lr=0.001)
+#         while loss > -mu:
+#             optimizer.zero_grad()
+#             lossG.backward()
+#             optimizer.step()
+#             loss = - fn(X)
             
-        return X.data
+#         return X.data
         
         
 class AvgExtremeness(Extremeness):
@@ -47,8 +50,14 @@ class AvgExtremeness(Extremeness):
         fn = lambda x: torch.mean(x)
         return fn
     
-    def init_func(self, inp_size, mu):
-        raise  torch.ones(inp_size) * mu
+    def grad(self, inp_size, mu):
+        return torch.ones(inp_size) * mu
+    
+    def level(self, inp_size, mu):
+        return torch.ones(inp_size) * mu
+    
+#     def init_func(self, inp_size, mu):
+#         raise  torch.ones(inp_size) * mu
     
     
     
@@ -64,5 +73,11 @@ class MaxExtremeness(Extremeness):
     def func(self):
         fn = lambda x: torch.max(x)
         return fn
+    
+    def grad(self, inp_size, mu):
+        return torch.ones(inp_size) * mu
+    
+    def level(self, inp_size, mu):
+        return torch.ones(inp_size) * mu
    
 
