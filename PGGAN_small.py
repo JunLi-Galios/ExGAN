@@ -13,6 +13,8 @@ from torch import LongTensor, FloatTensor
 from scipy.stats import skewnorm, genpareto
 from torchvision.utils import save_image
 import sys
+from Extremeness import AvgExtremeness, MaxExtremeness
+
 
 class NWSDataset(Dataset):
     """
@@ -113,7 +115,7 @@ class Discriminator(nn.Module):
         return source
     
 class Aggregator(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_mu, out_channels):
         super(Aggregator, self).__init__()
         self.in_channels = in_channels
         self.block1 = convBNReLU(self.in_channels, 64)
@@ -121,7 +123,7 @@ class Aggregator(nn.Module):
         self.block3 = convBNReLU(128, 256)
         self.block4 = convBNReLU(256, 512)
         self.block5 = nn.Conv2d(512, 64, 4, 1, 0)
-        self.mu = nn.Linear(64, out_channels)
+        self.mu = nn.Linear(64, out_mu)
         self.sigma = nn.Linear(64, out_channels)
         self.gamma = nn.Linear(64, out_channels)
         self.out_channels = out_channels
@@ -143,24 +145,19 @@ class Aggregator(nn.Module):
       
 class Transformer(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(Aggregator, self).__init__()
+        super(Transformer, self).__init__()
         self.T_sigma = nn.Linear(in_channels, out_channels)
         self.T_gamma = nn.Linear(in_channels, out_channels)
 
-    def forward(self, inp):
-        sigma = self.T_sigma(inp)
-        gamma = self.T_gamma(inp)
-        return F.softplus(sigma), F.softplus(gamma)
+    def forward(self, sigma, gamma):
+        sigma_out = self.T_sigma(sigma)
+        gamma_out = self.T_gamma(gamma)
+        return F.softplus(sigma_out), F.softplus(gamma_out)
 
-def avg_extremeness(img):
-    return torch.mean(img, dim=(1,2,3))
-  
-def max_extremeness(img):
-    batch = img.size()[0]
-    re_img = img.reshape(batch, -1)
-    return torch.max(re_img, dim=1).values
     
-
+avg_e = AvgExtremeness(0.5)
+max_e = MaxExtremeness(0.5) 
+e_list = [avg_e, max_e]
       
 latentdim = 20
 img_size = [64, 64]
@@ -168,11 +165,11 @@ criterionSource = nn.BCELoss()
 criterionContinuous = nn.L1Loss()
 criterionValG = nn.L1Loss()
 criterionValD = nn.L1Loss()
-k = 1
+k = 2
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
 D = Discriminator(in_channels=1).cuda()
-A = Aggregator(1, img_size).cuda()
-T = Transformer(k, np.prod(img_size)).cuda()
+A = Aggregator(1, 2, out_channels=latentdim).cuda()
+T = Transformer(latentdim, np.prod(img_size)).cuda()
 G.apply(weights_init_normal)
 D.apply(weights_init_normal)
 A.apply(weights_init_normal)
@@ -197,31 +194,26 @@ os.makedirs(DIRNAME, exist_ok=True)
 
 board = SummaryWriter(log_dir=DIRNAME)
 
-def pick_samples(samples, u):
-    flag_list = []
+def pick_samples(samples, e_list, mu):
     batch = samples.size()[0]
-    print('samples', samples.size())
-    re_samples = samples.reshape(batch, -1)
-    print('re_samples', re_samples.size())
-    re_u = u.flatten()
-    
-    for i in range(len(re_u)):
-        flag = re_samples[:,i] > re_u[i]
+    flag_list = []
+    for i in range(len(e_list)):
+        e = e_list[i]
+        flag = e(samples) > mu[i]
         flag_list.append(flag)
-#         print(flag)
 
-    flags = torch.stack(flag_list, dim=1)
-#     print('flags', flags.size())
+#     flags = torch.stack(flag_list, dim=1)
+# #     print('flags', flags.size())
     
-    flags.max()
-    total_flag = re_samples[:,0] < -np.inf
+#     flags.max()
+    total_flag = flag_list[0]
     
-    for i in range(len(re_u)):
+    for i in range(len(flag_list)):
         total_flag = total_flag | flag_list[i]
         
-#     print(total_flag)
-    extremes = re_samples[total_flag,:]
-    extremes = torch.reshape(extremes, [-1, 1] + img_size)
+    print(total_flag)
+    extremes = samples[total_flag]
+    print('extremes size', extremes.size())
     
     return extremes
 
@@ -230,26 +222,49 @@ ratio = 0.001
 # mu = torch.ones(img_size)
 mu = torch.ones(img_size).cuda() * 0.5
 sigma = torch.ones(img_size).cuda()
+gamma = torch.ones(img_size).cuda()
 expo = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
 n_extremes_list = []
 acc_list = []
+
+
+def cal_mu_incre(e_list, mu):
+    min_mu_incre = np.inf
+    for i in range(len(e_list)):
+        e = e_list[i]
+        mu_incre = e.optimize(img_size, mu[i])
+        if min_mu_incre > mu_incre:
+            min_mu_incre = mu_incre
+            
+    return min_mu_incre
 
 
 for epoch in range(1000):
     print(epoch)
     for images in dataloader:
         mu_val, sigma_val, gamma_val = A(images)
-        sigma_val, gamma_val = T(images)
+        sigma_val, gamma_val = T(sigma_val, gamma_val)
         print('mu_val size', mu_val.size())
         mu_incre = torch.mean(torch.abs(mu_val),dim=0)
         print('mu_incre size', mu_incre.size())
         mu = (1 - ratio) * mu + ratio * mu_incre
-        print('sigma_val size', sigma_val.size())
-        sigma_incre = torch.mean(torch.abs(sigma_val),dim=0)
+        
+        sigma_incre = torch.mean(sigma_val,dim=0)
         print('sigma_incre size', sigma_incre.size())
         sigma = (1 - ratio) * sigma + ratio * sigma_incre
         
-        extreme_samples = pick_samples(images, mu) - mu
+        gamma_incre = torch.mean(gamma_val,dim=0)
+        print('gamma_incre size', gamma_incre.size())
+        gamma = (1 - ratio) * gamma + ratio * gamma_incre
+        
+        extreme_samples = pick_samples(images, e_list, mu)
+        
+        min_mu_incre = cal_mu_incre(e_list, mu)
+        print('min_mu_incre size', min_mu_incre.size())
+        print('min_mu_incre', min_mu_incre)
+        
+        extreme_samples = extreme_samples - min_mu_incre
+        
         n_extremes = len(extreme_samples)
         print('n_extremes', n_extremes)
         n_extremes_list.append(n_extremes)    
