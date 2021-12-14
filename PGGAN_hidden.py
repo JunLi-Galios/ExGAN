@@ -107,18 +107,12 @@ class Decoder(nn.Module):
         x = self.decoder_conv(x)
         x = torch.sigmoid(x)
         return x
-
-G = nn.Sequential(                      # Generator
-    nn.Linear(i_dim, h_dim),            # random ideas (could from normal distribution)
-    nn.ReLU(inplace=False),
-    nn.Linear(h_dim, h_dim),    
-    nn.ReLU(inplace=False),
-    nn.Linear(h_dim, o_dim+1),     
-)
       
 class Generator(nn.Module):
     def __init__(self, i_dim, o_dim):
         super(Generator, self).__init__()
+        self.i_dim = i_dim
+        self.o_dim = o_dim
         self.net = nn.Sequential(                      
               nn.Linear(i_dim, h_dim),            
               nn.ReLU(inplace=False),
@@ -127,9 +121,21 @@ class Generator(nn.Module):
               nn.Linear(h_dim, o_dim),     
           )
         self.m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(o_dim), torch.eye(o_dim))
+        self.e = torch.distributions.exponential.Exponential(torch.ones(o_dim))
 
-    def forward(self, inp):
-        out = self.net(inp)
+
+    def forward(self, n_extremes):
+        G_noise = torch.randn(n_extremes, self.i_dim, requires_grad=True)
+        G_samples = G(G_noise)
+        
+        max_value, _ = torch.max(G_samples, dim=1)
+        max_value = max_value.unsqueeze(-1)
+        print('G_samples', G_samples.size())
+        print('max_value', max_value.size())
+        G_samples = G_samples - max_value
+        
+        e_samples = e.rsample([len(G_samples)])
+        
         return torch.tanh(self.block5(out))
 
 
@@ -159,7 +165,7 @@ class Discriminator(nn.Module):
         return source
     
 class Aggregator(nn.Module):
-    def __init__(self, in_channels, out_mu, out_channels):
+    def __init__(self, in_channels, out_dim):
         super(Aggregator, self).__init__()
         self.in_channels = in_channels
         self.block1 = convBNReLU(self.in_channels, 64)
@@ -167,10 +173,9 @@ class Aggregator(nn.Module):
         self.block3 = convBNReLU(128, 256)
         self.block4 = convBNReLU(256, 512)
         self.block5 = nn.Conv2d(512, 64, 4, 1, 0)
-        self.mu = nn.Linear(64, out_mu)
-        self.sigma = nn.Linear(64, out_channels)
-        self.gamma = nn.Linear(64, out_channels)
-        self.out_channels = out_channels
+        self.mu = nn.Linear(64, out_dim)
+        self.sigma = nn.Linear(64, out_dim)
+        self.gamma = nn.Linear(64, out_dim)
 
     def forward(self, inp):
         out = self.block1(inp) 
@@ -187,37 +192,21 @@ class Aggregator(nn.Module):
         gamma = self.gamma(out)
         return mu, sigma, gamma
       
-class Transformer(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(Transformer, self).__init__()
-        self.T_sigma = nn.Linear(in_channels, out_channels)
-        self.T_gamma = nn.Linear(in_channels, out_channels)
-
-    def forward(self, sigma, gamma):
-        sigma_out = self.T_sigma(sigma)
-        gamma_out = self.T_gamma(gamma)
-        return F.softplus(sigma_out), F.softplus(gamma_out)
-
-    
-avg_e = AvgExtremeness()
-max_e = MaxExtremeness() 
-e_list = [avg_e, max_e]
       
-latentdim = 20
+noise_dim = 5
+latent_dim = 20
 img_size = [64, 64]
 criterionSource = nn.BCELoss()
 criterionContinuous = nn.L1Loss()
 criterionValG = nn.L1Loss()
 criterionValD = nn.L1Loss()
 k = 2
-G = Generator(in_channels=latentdim, out_channels=1).cuda()
+G = Generator(i_dim=noise_dim, o_dim=latent_dim).cuda()
 D = Discriminator(in_channels=1).cuda()
 A = Aggregator(1, 2, out_channels=latentdim).cuda()
-T = Transformer(latentdim, np.prod(img_size)).cuda()
 G.apply(weights_init_normal)
 D.apply(weights_init_normal)
 A.apply(weights_init_normal)
-T.apply(weights_init_normal)
 
 
 
