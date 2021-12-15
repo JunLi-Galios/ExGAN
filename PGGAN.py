@@ -178,7 +178,7 @@ class Transformer(nn.Module):
         out = self.block4(out)
         return out
 
-def sample_image(batches_done):
+def sample_image(batches_done, G, static_z, DIRNAME):
     static_sample = G(static_z).detach().cpu()
     static_sample = (static_sample + 1) / 2.0
     save_image(static_sample, DIRNAME + "%d.png" % batches_done, nrow=9)
@@ -347,7 +347,7 @@ def main():
         if (epoch + 1) % 10 == 0:   
             with torch.no_grad():
                 G.eval()
-                sample_image(epoch)
+                sample_image(epoch, G, static_z, DIRNAME)
                 G.train()
                 
 
