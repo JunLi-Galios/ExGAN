@@ -181,7 +181,7 @@ class Transformer(nn.Module):
 def sample_image(batches_done, G, static_z, DIRNAME):
     static_sample = G(static_z).detach().cpu()
     static_sample = (static_sample + 1) / 2.0
-    save_image(static_sample, DIRNAME + "%d.png" % batches_done, nrow=9)
+    save_image(static_sample, DIRNAME + "/%d.png" % batches_done, nrow=9)
     
 def pick_samples(samples, u, img_size):
     flag_list = []
@@ -342,8 +342,8 @@ def main():
             board.add_scalar('lossD', lossD.item(), step)
             board.add_scalar('lossG', lossG.item(), step)
         if (epoch + 1) % 50 == 0:
-            torch.save(G.state_dict(), DIRNAME + "G" + str(epoch) + ".pt")
-            torch.save(D.state_dict(), DIRNAME + "D" + str(epoch) + ".pt")
+            torch.save(G.state_dict(), DIRNAME + "/G" + str(epoch) + ".pt")
+            torch.save(D.state_dict(), DIRNAME + "/D" + str(epoch) + ".pt")
         if (epoch + 1) % 10 == 0:   
             with torch.no_grad():
                 G.eval()
