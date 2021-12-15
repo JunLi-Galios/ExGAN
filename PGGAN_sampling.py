@@ -10,6 +10,20 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch import FloatTensor
 
+import argparse
+parser = argparse.ArgumentParser(description='PGGAN')
+parser.add_argument('--save', default='', type=str,
+                    help='save parameters and logs in this folder')
+
+# Dataset options
+parser.add_argument('--dataset', default='real', type=str)
+
+# Model options
+parser.add_argument('--model', default='finetune', type=str)
+parser.add_argument('--simple', action='store_true', default=False)
+
+args = parser.parse_args()
+
 def convTBNReLU(in_channels, out_channels, kernel_size=4, stride=2, padding=1):
     return nn.Sequential(
         nn.ConvTranspose2d(
@@ -94,6 +108,7 @@ class Aggregator(nn.Module):
         out_channels = np.prod(img_size)
         self.mu = nn.Linear(64, out_channels)
         self.sigma = nn.Linear(64, out_channels)
+        self.gamma = nn.Linear(64, out_channels)
         self.img_size = img_size
 
     def forward(self, inp):
@@ -103,12 +118,30 @@ class Aggregator(nn.Module):
         out = self.block4(out)
         out = self.block5(out)
         size = out.shape[0]
-        print('out', out.size())
+#         print('out', out.size())
         out = out.view(size, -1)
-        print('out', out.size())
+#         print('out', out.size())
         mu = torch.abs(self.mu(out))
         sigma = torch.abs(self.sigma(out))
-        return torch.reshape(mu, [size] + self.img_size), torch.reshape(sigma, [size] + self.img_size)
+        gamma = torch.abs(self.gamma(out))
+        return torch.reshape(mu, [size] + self.img_size), torch.reshape(sigma, [size] + self.img_size), \
+            torch.reshape(gamma, [size] + self.img_size)
+        
+    
+class Transformer(nn.Module):
+    def __init__(self):
+        super(Transformer, self).__init__()
+        self.block1 = nn.Conv2d(1, 4, 3, 1, 1)
+        self.block2 = nn.Conv2d(4, 4, 3, 1, 1)
+        self.block3 = nn.Conv2d(4, 4, 3, 1, 1)
+        self.block4 = nn.Conv2d(4, 1, 3, 1, 1)
+
+    def forward(self, inp):
+        out = self.block1(inp) 
+        out = self.block2(out)
+        out = self.block3(out)
+        out = self.block4(out)
+        return out
 
 latentdim = 20
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
