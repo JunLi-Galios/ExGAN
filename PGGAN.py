@@ -344,6 +344,10 @@ def main():
         if (epoch + 1) % 50 == 0:
             torch.save(G.state_dict(), DIRNAME + "/G" + str(epoch) + ".pt")
             torch.save(D.state_dict(), DIRNAME + "/D" + str(epoch) + ".pt")
+            torch.save(T.state_dict(), DIRNAME + "/T" + str(epoch) + ".pt")
+            torch.save(mu, DIRNAME + "/mu" + str(epoch) + ".pt")
+            torch.save(gamma, DIRNAME + "/gamma" + str(epoch) + ".pt")
+            torch.save(sigma, DIRNAME + "/sigma" + str(epoch) + ".pt")
         if (epoch + 1) % 10 == 0:   
             with torch.no_grad():
                 G.eval()
