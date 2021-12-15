@@ -324,7 +324,7 @@ def main():
             trueTensor = 0.9*torch.ones(batch_size).view(-1, 1).cuda()
 #             print('lossG trueTensor', trueTensor.size())
 #             print('fakeSource', fakeSource.size())
-            lossG = criterionSource(fakeSource, trueTensor.expand_as(fakeSource))
+            lossG = criterionSource(fakeSource, trueTensor.expand_as(fakeSource)) + 0.01 * torch.norm(mu)
             optimizerG.zero_grad()
             optimizerA.zero_grad()
             lossG.backward(retain_graph=True)
