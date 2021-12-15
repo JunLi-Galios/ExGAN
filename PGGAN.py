@@ -35,12 +35,13 @@ class NWSDataset(Dataset):
     """
 
     def __init__(
-        self, path='/mnt/home/junli/PGGAN/data/', dsize=2557
+        self, path='/mnt/home/junli/PGGAN/data/', dsize=2556
     ):
         if args.dataset == 'real':
             self.real = torch.load(path+'real.pt').cuda()
         else:
             self.real = torch.load(path+'fake10.pt').cuda()
+        dsize = len(self.real)
         self.indices = np.random.permutation(dsize)
         self.real.requires_grad = False
         
@@ -142,7 +143,7 @@ class Aggregator(nn.Module):
         out_channels = np.prod(img_size)
         self.mu = nn.Linear(64, out_channels)
         self.sigma = nn.Linear(64, out_channels)
-        sefl.gamma = nn.Linear(64, out_channels)
+        self.gamma = nn.Linear(64, out_channels)
         self.img_size = img_size
 
     def forward(self, inp):
@@ -152,9 +153,9 @@ class Aggregator(nn.Module):
         out = self.block4(out)
         out = self.block5(out)
         size = out.shape[0]
-        print('out', out.size())
+#         print('out', out.size())
         out = out.view(size, -1)
-        print('out', out.size())
+#         print('out', out.size())
         mu = torch.abs(self.mu(out))
         sigma = torch.abs(self.sigma(out))
         gamma = torch.abs(self.gamma(out))
@@ -165,10 +166,10 @@ class Aggregator(nn.Module):
 class Transformer(nn.Module):
     def __init__(self):
         super(Transformer, self).__init__()
-        self.block1 = nn.Conv2d(1, 4, 3, 1, 0)
-        self.block2 = nn.Conv2d(4, 4, 3, 1, 0)
-        self.block3 = nn.Conv2d(4, 4, 3, 1, 0)
-        self.block4 = nn.Conv2d(4, 1, 3, 1, 0)
+        self.block1 = nn.Conv2d(1, 4, 3, 1, 1)
+        self.block2 = nn.Conv2d(4, 4, 3, 1, 1)
+        self.block3 = nn.Conv2d(4, 4, 3, 1, 1)
+        self.block4 = nn.Conv2d(4, 1, 3, 1, 1)
 
     def forward(self, inp):
         out = self.block1(inp) 
@@ -182,7 +183,7 @@ def sample_image(batches_done):
     static_sample = (static_sample + 1) / 2.0
     save_image(static_sample, DIRNAME + "%d.png" % batches_done, nrow=9)
     
-def pick_samples(samples, u):
+def pick_samples(samples, u, img_size):
     flag_list = []
     batch = samples.size()[0]
 #     print('samples', samples.size())
@@ -267,9 +268,9 @@ def main():
 #             print('gamma_incre size', gamma_incre.size())
             gamma = (1 - ratio) * gamma + ratio * gamma_incre
     
-            extreme_samples = pick_samples(images, mu) - mu
+            extreme_samples = pick_samples(images, mu, img_size) - mu
             n_extremes = len(extreme_samples)
-#             print('n_extremes', n_extremes)
+            print('n_extremes', n_extremes)
             n_extremes_list.append(n_extremes)    
 
             noise = 1e-5*max(1 - (epoch/500.0), 0)
@@ -315,7 +316,7 @@ def main():
             fakeLoss = criterionSource(fakeSource, falseTensor.expand_as(fakeSource))
             lossD = realLoss + fakeLoss
             optimizerD.zero_grad()
-            lossD.backward()
+            lossD.backward(retain_graph=True)
             torch.nn.utils.clip_grad_norm_(D.parameters(),20)
             optimizerD.step()
 
@@ -326,11 +327,15 @@ def main():
             lossG = criterionSource(fakeSource, trueTensor.expand_as(fakeSource))
             optimizerG.zero_grad()
             optimizerA.zero_grad()
-            lossG.backward()
+            lossG.backward(retain_graph=True)
             torch.nn.utils.clip_grad_norm_(G.parameters(),20)
             torch.nn.utils.clip_grad_norm_(A.parameters(),20)
             optimizerG.step()
             optimizerA.step()
+            
+            mu = mu.detach()
+            sigma = sigma.detach()
+            gamma = gamma.detach()
 
             board.add_scalar('realLoss', realLoss.item(), step)
             board.add_scalar('fakeLoss', fakeLoss.item(), step)
