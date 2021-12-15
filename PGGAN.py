@@ -16,6 +16,8 @@ import sys
 
 import argparse
 parser = argparse.ArgumentParser(description='PGGAN')
+parser.add_argument('--save', default='', type=str,
+                    help='save parameters and logs in this folder')
 
 # Dataset options
 parser.add_argument('--dataset', default='real', type=str)
@@ -234,7 +236,7 @@ def main():
     
     static_z = Variable(FloatTensor(torch.randn((81, latentdim, 1, 1)))).cuda()
 
-    DIRNAME = 'PGGAN/'
+    DIRNAME = args.save
     os.makedirs(DIRNAME, exist_ok=True)
     board = SummaryWriter(log_dir=DIRNAME)
 
