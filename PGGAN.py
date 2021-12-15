@@ -265,8 +265,6 @@ def main():
 #             print('gamma_incre size', gamma_incre.size())
             gamma = (1 - ratio) * gamma + ratio * gamma_incre
     
-            
-
             extreme_samples = pick_samples(images, mu) - mu
             n_extremes = len(extreme_samples)
 #             print('n_extremes', n_extremes)
@@ -305,6 +303,8 @@ def main():
                 G_extremes = sigma * (G_samples + e_samples)
             else:
                 G_extremes = sigma / gamma * torch.exp(gamma * (G_samples + e_samples) - 1)
+                
+            G_extremes = T(G_extremes)
 
 #             print('images', images.size())
 #             print('G_extremes', G_extremes.size())
