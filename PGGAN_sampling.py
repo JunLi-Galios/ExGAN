@@ -11,12 +11,12 @@ from torch.autograd import Variable
 from torch import FloatTensor
 
 import argparse
-parser = argparse.ArgumentParser(description='PGGAN')
+parser = argparse.ArgumentParser(description='PGGAN_sampling')
 parser.add_argument('--save', default='', type=str,
                     help='save parameters and logs in this folder')
 
 # Dataset options
-parser.add_argument('--dataset', default='real', type=str)
+# parser.add_argument('--dataset', default='real', type=str)
 
 # Model options
 parser.add_argument('--model', default='finetune', type=str)
@@ -145,11 +145,16 @@ class Transformer(nn.Module):
 
 latentdim = 20
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
-
-G.load_state_dict(torch.load('PGGAN/G999.pt'))
+G.load_state_dict(torch.load('{}/G999.pt'.format(args.save)))
 G.eval()
-mu = torch.load('PGGAN/mu999.pt').cuda()
-sigma = torch.load('PGGAN/sigma999.pt').cuda()
+if args.model == 'finetune':
+    T = Transformer().cuda()
+else:
+    T = nn.Identity().cuda()
+T.eval()
+mu = torch.load('{}/mu999.pt'.format(args.save)).cuda()
+sigma = torch.load('{}/sigma999.pt'.format(args.save)).cuda()
+gamma = torch.load('{}/gamma999.pt'.format(args.save)).cuda()
 e = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
 
 t = time.time()
@@ -161,4 +166,4 @@ G_samples = fakeData - max_value
 e_samples = e.rsample([len(G_samples)]).cuda()
 G_extremes = sigma * (G_samples + e_samples) + mu
 print(time.time() - t)
-torch.save(0.5*(G_extremes+1), 'PxGAN_sample.pt')
+torch.save(0.5*(G_extremes+1), '{}/PxGAN_sample.pt'.format(args.save))
