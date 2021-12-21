@@ -164,6 +164,11 @@ max_value, _ = torch.max(torch.reshape(fakeData, [100, -1]), dim=1)
 max_value = torch.reshape(max_value, [-1, 1, 1, 1])
 G_samples = fakeData - max_value
 e_samples = e.rsample([len(G_samples)]).cuda()
-G_extremes = sigma * (G_samples + e_samples) + mu
+if args.simple == True:
+    G_extremes = sigma * (G_samples + e_samples)
+else:
+    G_extremes = sigma / gamma * torch.exp(gamma * (G_samples + e_samples) - 1)
+    
+G_extremes = T(G_extremes)
 print(time.time() - t)
 torch.save(0.5*(G_extremes+1), '{}/PxGAN_sample.pt'.format(args.save))
