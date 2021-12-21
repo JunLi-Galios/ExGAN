@@ -10,7 +10,7 @@ from scipy import linalg
 import warnings
 
 
-data = torch.load('data/test.pt')
+data = torch.load('../data/test.pt')
 numSamples = 57
 EPOCHS = 50
 loss_func = nn.L1Loss()
@@ -20,7 +20,7 @@ class AutoEncoder(nn.Module):
         super(AutoEncoder, self).__init__()
         self.encoder = nn.Sequential(nn.Linear(4096,128), nn.ReLU(True), nn.Dropout())
         self.decoder = nn.Sequential(nn.Linear(128,4096))
-        
+
     def forward(self,x):
         x = self.encoder(x)
         x = self.decoder(x)
@@ -31,7 +31,7 @@ optimizer = torch.optim.Adam(ae.parameters(), lr=1e-3)
 data = data.reshape(data.shape[0], -1)[:numSamples]
 losses = []
 
-for epoch in range(EPOCHS):   
+for epoch in range(EPOCHS):
     x = torch.autograd.Variable(data[torch.randperm(numSamples)]).cuda()
     optimizer.zero_grad()
     pred = ae(x)
@@ -43,7 +43,7 @@ plt.plot(losses)
 
 ae.eval()
 
-def FID(mu1, mu2, sigma1, sigma2): 
+def FID(mu1, mu2, sigma1, sigma2):
     eps=1e-30
     mu1 = np.atleast_1d(mu1)
     mu2 = np.atleast_1d(mu2)
@@ -79,5 +79,10 @@ def calcFID(data):
     mean, covar = np.mean(features, 0), np.cov(features, rowvar=False)
     return FID(mean, base_mean, covar, base_covar)
 
-base_features = ae.encoder(Variable(data).cuda()).detach().cpu().numpy()
+base_data = torch.load('/mnt/home/junli/PGGAN/data/fake10.pt')
+#base_data = base_data.reshape(base_data.shape[0], -1)[:numSamples]
+base_data = base_data.reshape(base_data.shape[0], -1)
+base_features = ae.encoder(Variable(base_data).cuda()).detach().cpu().numpy()
 base_mean, base_covar = np.mean(base_features, 0), np.cov(base_features, rowvar=False)
+fid = calcFID(data)
+print('FID', fid)
