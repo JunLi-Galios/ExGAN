@@ -144,6 +144,7 @@ class Transformer(nn.Module):
         return out
 
 latentdim = 20
+img_size = [64, 64]
 G = Generator(in_channels=latentdim, out_channels=1).cuda()
 G.load_state_dict(torch.load('{}/G999.pt'.format(args.save)))
 G.eval()
