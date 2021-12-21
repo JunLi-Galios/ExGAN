@@ -38,3 +38,7 @@ def plot_precip(data):
     cbar = m.colorbar(cs,location='bottom',pad="5%")
     cbar.set_label('mm')
     plt.show()
+    
+    
+images = torch.load('images.pt')
+plot_precip(images[0])
