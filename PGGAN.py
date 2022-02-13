@@ -246,7 +246,7 @@ def main():
     mu = torch.ones(img_size).cuda() * 0.5
     sigma = torch.ones(img_size).cuda()
     gamma = torch.ones(img_size).cuda()
-    e = torch.distributions.exponential.Exponential(torch.ones([1] + img_size))
+    e = torch.distributions.exponential.Exponential(torch.ones([1]))
     n_extremes_list = []
     acc_list = []
 
