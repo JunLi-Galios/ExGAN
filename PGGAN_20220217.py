@@ -131,6 +131,8 @@ def sample_image(batches_done):
 DIRNAME = 'DCGAN_1dexpo/'
 os.makedirs(DIRNAME, exist_ok=True)
 
+mu = 0
+
 board = SummaryWriter(log_dir=DIRNAME)
 img_size = [64, 64]
 e = torch.distributions.exponential.Exponential(torch.ones([1]))
@@ -151,7 +153,7 @@ for epoch in range(1000):
         )
         trueTensor = trueTensor.view(-1, 1).cuda()
         falseTensor = falseTensor.view(-1, 1).cuda()
-        images = images.cuda()
+        images = images.cuda() - mu
         realSource = D(images + noise*torch.randn_like(images).cuda())
         realLoss = criterionSource(realSource, trueTensor.expand_as(realSource))
         latent = Variable(torch.randn(batch_size, latentdim, 1, 1)).cuda()
